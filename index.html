@@ -16,6 +16,11 @@
         -webkit-font-smoothing: antialiased;
       }
       input, button, textarea { font-family: inherit; }
+      @keyframes salgo-spin { to { transform: rotate(360deg); } }
+      .salgo-spin { animation: salgo-spin 0.9s linear infinite; }
+      /* Controles del mapa acordes al tema oscuro */
+      .maplibregl-ctrl-attrib { font-size: 10px; }
+      .maplibregl-ctrl-attrib.maplibregl-compact { background: rgba(22,19,31,0.8); }
     </style>
   </head>
   <body>

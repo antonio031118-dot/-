@@ -11,8 +11,13 @@ Prueba inicial en **Madrid**, **Córdoba** y **El Puerto de Santa María**.
 
 - **Perfil** con nombre, ciudad y **código de amigo**.
 - **Amigos**: añade a tu gente por código y mira a qué discoteca sale cada uno.
-- **Feed por ciudad** con discotecas y terrazas, filtro por género musical y un
-  indicador de ambiente ("Arrancando", "Llenando", "Ambientazo").
+- **Catálogo completo de locales**: discotecas, bares y pubs de cada ciudad se
+  descargan en vivo desde **OpenStreetMap** (con coordenadas reales) y se
+  cachean. Hay una lista curada de respaldo por si OSM no responde.
+- **Feed por ciudad** con buscador, filtro por tipo (discotecas / bares / pubs /
+  terrazas) y un indicador de ambiente ("Arrancando", "Llenando", "Ambientazo").
+- **Mapa de la noche** con **MapLibre GL** y estilo oscuro de Carto (gratis, sin
+  API key): cada local es un punto y los que tienen gente se ven resaltados.
 - **"Voy"**: marca a dónde vas y mira quién más va. Tus amigos salen destacados.
 - **Previa**: tablón público por discoteca **+ chat 1-a-1** para cuadrar plan
   con quien va al mismo sitio.
