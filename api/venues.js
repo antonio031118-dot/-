@@ -11,9 +11,17 @@ const BBOX = {
 
 const ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
 ];
+
+// Overpass exige identificar la aplicación; sin User-Agent devuelve 406.
+const OVERPASS_HEADERS = {
+  "Content-Type": "application/x-www-form-urlencoded",
+  "User-Agent": "SalgoApp/1.0 (red social de fiesta; contacto: antonio031118@gmail.com)",
+  Accept: "application/json",
+};
 
 const slug = (s = "") =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -61,8 +69,7 @@ async function runQuery(query, timeoutMs) {
       const ctrl = new AbortController();
       const to = setTimeout(() => ctrl.abort(), timeoutMs);
       const r = await fetch(url, {
-        method: "POST", body, signal: ctrl.signal,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        method: "POST", body, signal: ctrl.signal, headers: OVERPASS_HEADERS,
       });
       clearTimeout(to);
       attempts.push({ host: new URL(url).host, status: r.status });
