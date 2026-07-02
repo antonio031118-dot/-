@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronLeft, Check, Send, ShieldCheck, MessageCircle, UserPlus, Sun } from "lucide-react";
 import { C, grad, inputStyle, primaryBtn, iconBtn } from "../theme.js";
+import { typeColor } from "../lib/venues.js";
 import { Avatar, SectionTitle } from "./ui.jsx";
 
 export default function ClubDetail({ club, going, posts, me, friendIds, onBack, onVoy, onPost, onChat, onAddFriend }) {
@@ -17,8 +18,9 @@ export default function ClubDetail({ club, going, posts, me, friendIds, onBack, 
         <button onClick={onBack} style={iconBtn} aria-label="Volver"><ChevronLeft size={20} color={C.text} /></button>
         <div>
           <div style={{ fontSize: 20, fontWeight: 800 }}>{club.name}</div>
-          <div style={{ fontSize: 12.5, color: C.sub, display: "flex", alignItems: "center", gap: 5 }}>
-            {club.genres.join(" · ")} · {club.area}
+          <div style={{ fontSize: 12.5, color: C.sub, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ color: typeColor(club.typeKey), fontWeight: 600 }}>{club.type}</span>
+            {club.area && <span>· {club.area}</span>}
             {club.terraza && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: C.teal }}><Sun size={12} /> terraza</span>}
           </div>
         </div>

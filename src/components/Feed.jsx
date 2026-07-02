@@ -1,8 +1,9 @@
 import React from "react";
-import { ChevronDown, Share2, Music2, Sun, Check, Users } from "lucide-react";
-import { C, grad, iconBtn } from "../theme.js";
-import { cityName, GENRES } from "../data.js";
+import { ChevronDown, Share2, Sun, Check, Users, MapPin, Search } from "lucide-react";
+import { C, grad, iconBtn, inputStyle } from "../theme.js";
+import { cityName, FILTERS } from "../data.js";
 import { vibe, initials } from "../lib/util.js";
+import { typeColor } from "../lib/venues.js";
 import { AvatarStack } from "./ui.jsx";
 
 export function Header({ me, city, onCity, onShare }) {
@@ -23,17 +24,27 @@ export function Header({ me, city, onCity, onShare }) {
   );
 }
 
-export function ChipRow({ genre, setGenre }) {
+export function SearchBar({ value, onChange }) {
+  return (
+    <div style={{ padding: "0 16px 10px", position: "relative" }}>
+      <Search size={16} color={C.muted} style={{ position: "absolute", left: 28, top: 12 }} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Buscar discoteca, bar o zona…"
+        style={{ ...inputStyle, marginBottom: 0, paddingLeft: 38 }} />
+    </div>
+  );
+}
+
+export function Filters({ filter, setFilter }) {
   return (
     <div style={{ display: "flex", gap: 8, padding: "0 16px 12px", overflowX: "auto" }}>
-      {GENRES.map((g) => {
-        const on = g === genre;
+      {FILTERS.map((f) => {
+        const on = f.key === filter;
         return (
-          <button key={g} onClick={() => setGenre(g)} style={{
+          <button key={f.key} onClick={() => setFilter(f.key)} style={{
             flexShrink: 0, fontSize: 13, padding: "7px 14px", borderRadius: 20, cursor: "pointer",
             border: on ? "none" : `1px solid ${C.border}`, background: on ? C.text : "transparent",
             color: on ? C.bg : C.sub, fontWeight: on ? 600 : 500,
-          }}>{g}</button>
+          }}>{f.label}</button>
         );
       })}
     </div>
@@ -49,14 +60,15 @@ export function ClubCard({ club, going, me, friendIds, onOpen, onVoy }) {
   return (
     <div style={{ background: C.card, border: `1px solid ${imHere ? C.magenta : C.border}`, borderRadius: 16, padding: 14 }}>
       <div onClick={onOpen} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 17, fontWeight: 700 }}>{club.name}</div>
-          <div style={{ fontSize: 12.5, color: C.sub, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
-            <Music2 size={13} /> {club.genres.join(" · ")}
-            {club.terraza && <span style={{ marginLeft: 4, display: "inline-flex", alignItems: "center", gap: 3, color: C.teal }}><Sun size={12} /> terraza</span>}
+          <div style={{ fontSize: 12.5, color: C.sub, marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ color: typeColor(club.typeKey), fontWeight: 600 }}>{club.type}</span>
+            {club.area && <span>· {club.area}</span>}
+            {club.terraza && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: C.teal }}><Sun size={12} /> terraza</span>}
           </div>
         </div>
-        <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 20, color: v.color, background: `${v.color}1f` }}>{v.label}</span>
+        <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 20, color: v.color, background: `${v.color}1f` }}>{v.label}</span>
       </div>
 
       <div onClick={onOpen} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9, marginTop: 12, minHeight: 26 }}>
