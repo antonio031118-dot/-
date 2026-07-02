@@ -1,0 +1,22 @@
+{
+  "name": "salgo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Salgo — red social de fiesta para decidir a dónde salir y montar previas. Prototipo para Madrid, Córdoba y El Puerto de Santa María.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "lucide-react": "^0.441.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.2"
+  }
+}
