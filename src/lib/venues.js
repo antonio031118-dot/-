@@ -129,9 +129,17 @@ function normalize(city, elements) {
 }
 
 // Descarga los locales de la ciudad. Devuelve null si no se pudo (se usará SEED).
-// Dos tandas: primero discotecas (prioritario, seguro) y luego bares/pubs, para
-// que las discotecas salgan aunque la consulta de bares sea pesada o falle.
+// 1) Vía función de servidor (/api/venues): la más fiable, con caché en el edge.
+// 2) Fallback: Overpass directo desde el navegador (p. ej. en desarrollo local).
 export async function fetchVenues(city) {
+  try {
+    const r = await fetch(`/api/venues?city=${encodeURIComponent(city)}`);
+    if (r.ok) {
+      const j = await r.json();
+      if (j?.venues?.length) return j.venues;
+    }
+  } catch { /* no hay función de servidor: probamos Overpass directo */ }
+
   const b = BBOX[city];
   if (!b) return null;
   const q = (amenity) => `[out:json][timeout:60];nwr["amenity"~"^(${amenity})$"](${b});out center tags;`;

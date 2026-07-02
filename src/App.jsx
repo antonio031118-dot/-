@@ -34,7 +34,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   const [tab, setTab] = useState("feed");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("disco");
   const [search, setSearch] = useState("");
   const [openClub, setOpenClub] = useState(null);
 
@@ -156,7 +156,7 @@ export default function App() {
     saveDevice("city", id);
     setShowCities(false);
     setOpenClub(null);
-    setFilter("all");
+    setFilter("disco");
     setSearch("");
     setTab("feed");
   }
@@ -356,7 +356,7 @@ export default function App() {
       {tab === "map" && (
         <div style={{ position: "fixed", top: 0, bottom: 72, left: 0, right: 0, maxWidth: 420, margin: "0 auto", background: C.bg }}>
           <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted, fontSize: 13 }}>Cargando mapa…</div>}>
-            <CityMap city={city} venues={venues} attendance={attendance} me={profile} onOpen={openVenue} />
+            <CityMap city={city} venues={filtered} attendance={attendance} me={profile} onOpen={openVenue} />
           </Suspense>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "14px 16px 26px", background: "linear-gradient(180deg, rgba(11,10,18,0.9) 0%, rgba(11,10,18,0) 100%)", pointerEvents: "none" }}>
             <button onClick={() => setShowCities(true)} style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0, color: C.sub }}>
