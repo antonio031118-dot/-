@@ -81,14 +81,30 @@ const ENDPOINTS = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 
-const AREA = {
-  madrid: 'area["name"="Madrid"]["admin_level"="8"]',
-  cordoba: 'area["name"="Córdoba"]["admin_level"="8"]',
-  puerto: 'area["name"="El Puerto de Santa María"]["admin_level"="8"]',
+// Bounding box (S,W,N,E) por ciudad. Mucho más rápido que la consulta por área.
+const BBOX = {
+  madrid: "40.25,-3.90,40.52,-3.55",
+  cordoba: "37.82,-4.86,37.93,-4.72",
+  puerto: "36.54,-6.30,36.64,-6.17",
 };
 
-function queryFor(city) {
-  return `[out:json][timeout:25];${AREA[city]}->.a;nwr["amenity"~"^(nightclub|bar|pub)$"](area.a);out center tags;`;
+async function runQuery(query) {
+  const body = "data=" + encodeURIComponent(query);
+  for (const url of ENDPOINTS) {
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 45000);
+      const r = await fetch(url, {
+        method: "POST", body, signal: ctrl.signal,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      clearTimeout(to);
+      if (!r.ok) continue;
+      const j = await r.json();
+      return j.elements || [];
+    } catch { /* siguiente endpoint */ }
+  }
+  return null;
 }
 
 function normalize(city, elements) {
@@ -113,24 +129,25 @@ function normalize(city, elements) {
 }
 
 // Descarga los locales de la ciudad. Devuelve null si no se pudo (se usará SEED).
+// 1) Vía función de servidor (/api/venues): la más fiable, con caché en el edge.
+// 2) Fallback: Overpass directo desde el navegador (p. ej. en desarrollo local).
 export async function fetchVenues(city) {
-  const body = "data=" + encodeURIComponent(queryFor(city));
-  for (const url of ENDPOINTS) {
-    try {
-      const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 28000);
-      const r = await fetch(url, {
-        method: "POST", body, signal: ctrl.signal,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      clearTimeout(to);
-      if (!r.ok) continue;
+  try {
+    const r = await fetch(`/api/venues?city=${encodeURIComponent(city)}`);
+    if (r.ok) {
       const j = await r.json();
-      const list = normalize(city, j.elements || []);
-      if (list.length) return list;
-    } catch { /* siguiente endpoint */ }
-  }
-  return null;
+      if (j?.venues?.length) return j.venues;
+    }
+  } catch { /* no hay función de servidor: probamos Overpass directo */ }
+
+  const b = BBOX[city];
+  if (!b) return null;
+  const q = (amenity) => `[out:json][timeout:60];nwr["amenity"~"^(${amenity})$"](${b});out center tags;`;
+  const clubs = await runQuery(q("nightclub"));
+  const barsPubs = await runQuery(q("bar|pub"));
+  if (clubs == null && barsPubs == null) return null;
+  const list = normalize(city, [...(clubs || []), ...(barsPubs || [])]);
+  return list.length ? list : null;
 }
 
 // Combina en vivo + respaldo, sin duplicar (los de OSM mandan por coordenadas).
