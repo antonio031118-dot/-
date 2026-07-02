@@ -51,39 +51,54 @@ function normalize(city, elements) {
   return [...byId.values()];
 }
 
-async function runQuery(query) {
+export const maxDuration = 60; // Vercel: dar margen a Overpass
+
+async function runQuery(query, timeoutMs) {
   const body = "data=" + encodeURIComponent(query);
+  const attempts = [];
   for (const url of ENDPOINTS) {
     try {
       const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 50000);
+      const to = setTimeout(() => ctrl.abort(), timeoutMs);
       const r = await fetch(url, {
         method: "POST", body, signal: ctrl.signal,
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       clearTimeout(to);
+      attempts.push({ host: new URL(url).host, status: r.status });
       if (!r.ok) continue;
       const j = await r.json();
-      return j.elements || [];
-    } catch { /* siguiente endpoint */ }
+      return { elements: j.elements || [], attempts };
+    } catch (e) {
+      attempts.push({ host: new URL(url).host, error: String(e).slice(0, 100) });
+    }
   }
-  return null;
+  return { elements: null, attempts };
 }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const city = String(req.query.city || "madrid").toLowerCase();
+  const debug = req.query.debug === "1";
   const b = BBOX[city];
   if (!b) return res.status(400).json({ ok: false, error: "ciudad no válida" });
 
-  const q = (amenity) => `[out:json][timeout:60];nwr["amenity"~"^(${amenity})$"](${b});out center tags;`;
-  const [clubs, barsPubs] = await Promise.all([runQuery(q("nightclub")), runQuery(q("bar|pub"))]);
-  if (clubs == null && barsPubs == null) {
-    return res.status(502).json({ ok: false, error: "OpenStreetMap no respondió" });
+  const q = (amenity) => `[out:json][timeout:25];nwr["amenity"~"^(${amenity})$"](${b});out center tags;`;
+
+  // Secuencial: primero discotecas (rápido), luego bares/pubs (best-effort).
+  const clubsR = await runQuery(q("nightclub"), 22000);
+  const barsR = await runQuery(q("bar|pub"), 25000);
+  const attempts = [...clubsR.attempts, ...barsR.attempts];
+
+  if (clubsR.elements == null && barsR.elements == null) {
+    return res.status(502).json({ ok: false, error: "OpenStreetMap no respondió", attempts });
   }
-  const venues = normalize(city, [...(clubs || []), ...(barsPubs || [])]);
+
+  const venues = normalize(city, [...(clubsR.elements || []), ...(barsR.elements || [])]);
   const discos = venues.filter((v) => v.typeKey === "disco").length;
 
   res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
-  return res.status(200).json({ ok: true, city, count: venues.length, discos, venues });
+  const payload = { ok: true, city, count: venues.length, discos, venues };
+  if (debug) payload.diagnostics = { attempts, barsFailed: barsR.elements == null };
+  return res.status(200).json(payload);
 }
