@@ -7,9 +7,9 @@ export const CITIES = [
 
 // Vista del mapa por ciudad (MapLibre usa [lng, lat]).
 export const CITY_VIEW = {
-  madrid: { center: [-3.7038, 40.4168], zoom: 12.2 },
-  cordoba: { center: [-4.7794, 37.8845], zoom: 13.2 },
-  puerto: { center: [-6.2330, 36.5945], zoom: 12.8 },
+  madrid: { center: [-3.7038, 40.4168], zoom: 13.4 },
+  cordoba: { center: [-4.7794, 37.8845], zoom: 14.2 },
+  puerto: { center: [-6.2330, 36.5945], zoom: 13.6 },
 };
 
 // Filtros del feed / mapa por tipo de local.

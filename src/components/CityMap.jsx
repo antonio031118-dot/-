@@ -46,6 +46,7 @@ export default function CityMap({ city, venues, attendance, me, onOpen }) {
 
     m.on("load", () => {
       m.addSource("venues", { type: "geojson", data: geojson() });
+      // halo para los sitios con gente
       m.addLayer({
         id: "v-glow", type: "circle", source: "venues", filter: [">", ["get", "count"], 0],
         paint: {
@@ -53,16 +54,31 @@ export default function CityMap({ city, venues, attendance, me, onOpen }) {
           "circle-color": "#FF3D8B", "circle-opacity": 0.16, "circle-blur": 0.7,
         },
       });
+      // puntos de todos los locales
       m.addLayer({
         id: "v-dot", type: "circle", source: "venues",
         paint: {
-          "circle-radius": ["case", [">", ["get", "count"], 0], 7, 5],
+          "circle-radius": ["case", [">", ["get", "count"], 0], 7, 4.5],
           "circle-color": ["case",
             ["==", ["get", "mine"], 1], "#FF3D8B",
-            [">", ["get", "count"], 0], "#8B5CF6", "#6E6885"],
-          "circle-stroke-width": 2, "circle-stroke-color": "#0B0A12",
+            [">", ["get", "count"], 0], "#8B5CF6", "#9A93B2"],
+          "circle-opacity": ["case", [">", ["get", "count"], 0], 1, 0.9],
+          "circle-stroke-width": ["case", [">", ["get", "count"], 0], 2, 1],
+          "circle-stroke-color": "#0B0A12",
         },
       });
+      // nombre de cada local (colisión automática, al acercar zoom)
+      m.addLayer({
+        id: "v-name", type: "symbol", source: "venues", minzoom: 13.5,
+        layout: {
+          "text-field": ["get", "name"], "text-size": 10.5,
+          "text-offset": [0, 1.0], "text-anchor": "top",
+          "text-font": ["Open Sans Regular"], "text-optional": true, "text-padding": 4,
+          "text-max-width": 9,
+        },
+        paint: { "text-color": "#CFC9DE", "text-halo-color": "#0B0A12", "text-halo-width": 1.3 },
+      });
+      // recuento de gente encima del punto
       m.addLayer({
         id: "v-count", type: "symbol", source: "venues", filter: [">", ["get", "count"], 0],
         layout: {
