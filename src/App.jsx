@@ -72,14 +72,14 @@ export default function App() {
     (async () => {
       setVenuesLoading(true);
       try {
-        const cached = await store.get(`venues:${city}`);
+        const cached = loadDevice(`venues:${city}`);
         if (cached?.list?.length && Date.now() - (cached.ts || 0) < VENUES_TTL) {
           if (!cancelled) setVenues(cached.list);
         } else {
           const live = await fetchVenues(city);
           const merged = mergeVenues(SEED[city] || [], live || []);
           if (!cancelled) setVenues(merged);
-          if (live?.length) await store.set(`venues:${city}`, { ts: Date.now(), list: merged });
+          if (live?.length) saveDevice(`venues:${city}`, { ts: Date.now(), list: merged });
         }
       } catch { /* nos quedamos con el respaldo */ }
       if (!cancelled) setVenuesLoading(false);
