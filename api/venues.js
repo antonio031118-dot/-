@@ -61,26 +61,32 @@ function normalize(city, elements) {
 
 export const maxDuration = 60; // Vercel: dar margen a Overpass
 
-async function runQuery(query, timeoutMs) {
+// Formato explícito (node/way/relation): compatible con todos los servidores.
+function buildQuery(amenity, b, timeout) {
+  const sel = `["amenity"~"^(${amenity})$"]`;
+  return `[out:json][timeout:${timeout}];(node${sel}(${b});way${sel}(${b});relation${sel}(${b}););out center tags;`;
+}
+
+// Prueba los servidores en orden; éxito solo si devuelve elementos (>0).
+async function runQuery(query, timeoutMs, attempts) {
   const body = "data=" + encodeURIComponent(query);
-  const attempts = [];
   for (const url of ENDPOINTS) {
+    const host = new URL(url).host;
     try {
       const ctrl = new AbortController();
       const to = setTimeout(() => ctrl.abort(), timeoutMs);
-      const r = await fetch(url, {
-        method: "POST", body, signal: ctrl.signal, headers: OVERPASS_HEADERS,
-      });
+      const r = await fetch(url, { method: "POST", body, signal: ctrl.signal, headers: OVERPASS_HEADERS });
       clearTimeout(to);
-      attempts.push({ host: new URL(url).host, status: r.status });
-      if (!r.ok) continue;
+      if (!r.ok) { attempts.push({ host, status: r.status }); continue; }
       const j = await r.json();
-      return { elements: j.elements || [], attempts };
+      const els = j.elements || [];
+      attempts.push({ host, status: 200, count: els.length, remark: j.remark ? String(j.remark).slice(0, 90) : undefined });
+      if (els.length) return els;
     } catch (e) {
-      attempts.push({ host: new URL(url).host, error: String(e).slice(0, 100) });
+      attempts.push({ host, error: String(e).slice(0, 90) });
     }
   }
-  return { elements: null, attempts };
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -90,22 +96,21 @@ export default async function handler(req, res) {
   const b = BBOX[city];
   if (!b) return res.status(400).json({ ok: false, error: "ciudad no válida" });
 
-  const q = (amenity) => `[out:json][timeout:25];nwr["amenity"~"^(${amenity})$"](${b});out center tags;`;
+  const attempts = [];
+  // 1) intento completo (discotecas + bares + pubs)
+  let els = await runQuery(buildQuery("nightclub|bar|pub", b, 45), 48000, attempts);
+  // 2) plan de emergencia: al menos las discotecas (consulta pequeña y rápida)
+  if (!els) els = await runQuery(buildQuery("nightclub", b, 25), 25000, attempts);
 
-  // Secuencial: primero discotecas (rápido), luego bares/pubs (best-effort).
-  const clubsR = await runQuery(q("nightclub"), 22000);
-  const barsR = await runQuery(q("bar|pub"), 25000);
-  const attempts = [...clubsR.attempts, ...barsR.attempts];
-
-  if (clubsR.elements == null && barsR.elements == null) {
+  if (!els) {
     return res.status(502).json({ ok: false, error: "OpenStreetMap no respondió", attempts });
   }
 
-  const venues = normalize(city, [...(clubsR.elements || []), ...(barsR.elements || [])]);
+  const venues = normalize(city, els);
   const discos = venues.filter((v) => v.typeKey === "disco").length;
 
   res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
   const payload = { ok: true, city, count: venues.length, discos, venues };
-  if (debug) payload.diagnostics = { attempts, barsFailed: barsR.elements == null };
+  if (debug) payload.diagnostics = { attempts };
   return res.status(200).json(payload);
 }
