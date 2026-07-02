@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { ChevronLeft, Check, Send, ShieldCheck, MessageCircle, UserPlus, Sun } from "lucide-react";
+import { ChevronLeft, Check, Send, ShieldCheck, MessageCircle, UserPlus, Sun, PartyPopper, Ticket, Clock, Pencil, Plus } from "lucide-react";
 import { C, grad, inputStyle, primaryBtn, iconBtn } from "../theme.js";
 import { typeColor } from "../lib/venues.js";
 import { Avatar, SectionTitle } from "./ui.jsx";
 
-export default function ClubDetail({ club, going, posts, me, friendIds, onBack, onVoy, onPost, onChat, onAddFriend }) {
+export default function ClubDetail({ club, going, posts, me, friendIds, event, onEditEvent, onBack, onVoy, onPost, onChat, onAddFriend }) {
   const [txt, setTxt] = useState("");
   const imHere = going.some((x) => x.id === me.id);
 
@@ -27,6 +27,33 @@ export default function ClubDetail({ club, going, posts, me, friendIds, onBack, 
       </div>
 
       <div style={{ padding: "0 16px" }}>
+        {event ? (
+          <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${C.magenta}`, marginBottom: 16 }}>
+            {event.flyer && (
+              <div style={{ height: 150, background: `#000 center/cover no-repeat url(${JSON.stringify(event.flyer)})` }} />
+            )}
+            <div style={{ padding: 14, background: `${C.magenta}12` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.magenta, display: "inline-flex", alignItems: "center", gap: 4 }}><PartyPopper size={13} /> FIESTA DE HOY</span>
+                  <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>{event.title}</div>
+                  {event.time && <div style={{ fontSize: 13, color: C.sub, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}><Clock size={13} /> {event.time}</div>}
+                </div>
+                <button onClick={onEditEvent} style={{ ...iconBtn, width: 34, height: 34 }} aria-label="Editar fiesta"><Pencil size={15} color={C.sub} /></button>
+              </div>
+              {event.ticket && (
+                <a href={event.ticket} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none", ...primaryBtn, width: "100%", boxSizing: "border-box", marginTop: 12 }}>
+                  <Ticket size={15} /> Comprar entradas
+                </a>
+              )}
+            </div>
+          </div>
+        ) : (
+          <button onClick={onEditEvent} style={{ width: "100%", marginBottom: 16, padding: "11px", borderRadius: 12, cursor: "pointer", border: `1px dashed ${C.borderStrong}`, background: "transparent", color: C.text, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <Plus size={16} /> Publicar la fiesta de esta noche
+          </button>
+        )}
+
         <button onClick={onVoy} style={{ ...primaryBtn, width: "100%", background: imHere ? grad : "transparent", color: imHere ? "#fff" : C.text, boxShadow: imHere ? "none" : `inset 0 0 0 1px ${C.borderStrong}`, marginBottom: 18 }}>
           <Check size={15} style={{ verticalAlign: -3, marginRight: 6 }} />{imHere ? "Vas aquí esta noche" : "Marcar que voy"}
         </button>

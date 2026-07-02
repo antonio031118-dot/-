@@ -7,8 +7,9 @@ import { partyDay, genCode, newId, convoId } from "./lib/util.js";
 import { SEED, fetchVenues, mergeVenues, matchFilter } from "./lib/venues.js";
 import { Shell, BottomNav, Modal, Placeholder } from "./components/ui.jsx";
 import Onboarding from "./components/Onboarding.jsx";
-import { Header, Filters, SearchBar, ClubCard } from "./components/Feed.jsx";
+import { Header, Filters, SearchBar, ClubCard, EventCard, AddEventButton } from "./components/Feed.jsx";
 import ClubDetail from "./components/ClubDetail.jsx";
+import EventForm from "./components/EventForm.jsx";
 import Friends from "./components/Friends.jsx";
 import Profile from "./components/Profile.jsx";
 import { MessagesTab, ChatView } from "./components/Chat.jsx";
@@ -43,6 +44,8 @@ export default function App() {
 
   const [attendance, setAttendance] = useState({}); // { venueId: [ {id,name,ts} ] }
   const [previa, setPrevia] = useState({});         // { venueId: [ {id,name,text,ts} ] }
+  const [events, setEvents] = useState({});         // { venueId: { title,time,ticket,flyer,venueName,by,byName } }
+  const [eventForm, setEventForm] = useState(null); // { venueId } | null
   const [directory, setDirectory] = useState({});
   const [friends, setFriends] = useState([]);
   const [convos, setConvos] = useState([]);
@@ -94,6 +97,7 @@ export default function App() {
     if (!profile || !city) return;
     const day = partyDay();
     const att = (await store.get(`att:${day}:${city}`)) || {};
+    const evs = (await store.get(`events:${day}:${city}`)) || {};
 
     const dir = (await store.get("directory")) || {};
     const friendIds = (await store.get(`friends:${profile.id}`)) || [];
@@ -116,6 +120,7 @@ export default function App() {
     for (const id of wanted) prv[id] = (await store.get(`prv:${id}`)) || [];
 
     setAttendance(att);
+    setEvents(evs);
     setDirectory(dir);
     setFriends(fr);
     setConvos(convosList);
@@ -188,6 +193,25 @@ export default function App() {
     const next = [...list, { id: profile.id, name: profile.name, text: text.trim(), ts: Date.now() }];
     setPrevia((p) => ({ ...p, [venueId]: next }));
     await store.set(key, next);
+  }
+
+  async function saveEvent(venueId, data, venueName) {
+    if (!profile) return;
+    const key = `events:${partyDay()}:${city}`;
+    const doc = (await store.get(key)) || {};
+    doc[venueId] = { ...data, venueName, by: profile.id, byName: profile.name, ts: Date.now() };
+    setEvents({ ...doc });
+    await store.set(key, doc);
+    setEventForm(null);
+  }
+
+  async function removeEvent(venueId) {
+    const key = `events:${partyDay()}:${city}`;
+    const doc = (await store.get(key)) || {};
+    delete doc[venueId];
+    setEvents({ ...doc });
+    await store.set(key, doc);
+    setEventForm(null);
   }
 
   async function addEdge(a, b) {
@@ -277,6 +301,11 @@ export default function App() {
     friendPlans[f.id] = venues.filter((v) => (attendance[v.id] || []).some((x) => x.id === f.id)).map((v) => v.name);
   }
 
+  const tonight = venues
+    .filter((v) => events[v.id])
+    .map((v) => ({ v, ev: events[v.id] }))
+    .sort((a, b) => (attendance[b.v.id]?.length || 0) - (attendance[a.v.id]?.length || 0));
+
   const q = search.trim().toLowerCase();
   const filtered = venues
     .filter((v) => matchFilter(v, filter))
@@ -310,7 +339,8 @@ export default function App() {
       return (
         <Shell>
           <ClubDetail club={club} going={attendance[club.id] || []} posts={previa[club.id] || []} me={profile}
-            friendIds={friendIds} onBack={() => setOpenClub(null)} onVoy={() => toggleVoy(club.id)}
+            friendIds={friendIds} event={events[club.id]} onEditEvent={() => setEventForm({ venueId: club.id })}
+            onBack={() => setOpenClub(null)} onVoy={() => toggleVoy(club.id)}
             onPost={(t) => postPrevia(club.id, t)} onChat={(p) => openChat(p, club.id)} onAddFriend={addFriendObj} />
           <BottomNav tab={tab} setTab={(t) => { setOpenClub(null); setTab(t); }} unread={unread} />
         </Shell>
@@ -332,6 +362,28 @@ export default function App() {
               <X size={15} color={C.muted} style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => setBanner(false)} />
             </div>
           )}
+          <div style={{ padding: "4px 16px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>🎉 Fiestas de hoy</div>
+              <AddEventButton onClick={() => setEventForm({ venueId: null })} />
+            </div>
+            {tonight.length === 0 ? (
+              <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.5 }}>
+                Aún no hay fiestas publicadas para esta noche. ¡Publica la primera y que la gente se apunte!
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {tonight.map(({ v, ev }) => (
+                  <EventCard key={v.id} club={v} ev={ev} going={attendance[v.id] || []} me={profile}
+                    onOpen={() => openVenue(v.id)} onVoy={() => toggleVoy(v.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: C.muted, fontWeight: 600, padding: "8px 16px 4px" }}>
+            Todos los locales
+          </div>
           <SearchBar value={search} onChange={setSearch} />
           <Filters filter={filter} setFilter={setFilter} />
           <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -356,7 +408,7 @@ export default function App() {
       {tab === "map" && (
         <div style={{ position: "fixed", top: 0, bottom: 72, left: 0, right: 0, maxWidth: 420, margin: "0 auto", background: C.bg }}>
           <Suspense fallback={<div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted, fontSize: 13 }}>Cargando mapa…</div>}>
-            <CityMap city={city} venues={filtered} attendance={attendance} me={profile} onOpen={openVenue} />
+            <CityMap city={city} venues={filtered} attendance={attendance} events={events} me={profile} onOpen={openVenue} />
           </Suspense>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "14px 16px 26px", background: "linear-gradient(180deg, rgba(11,10,18,0.9) 0%, rgba(11,10,18,0) 100%)", pointerEvents: "none" }}>
             <button onClick={() => setShowCities(true)} style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0, color: C.sub }}>
@@ -405,6 +457,12 @@ export default function App() {
             ))}
           </div>
         </Modal>
+      )}
+
+      {eventForm && (
+        <EventForm venues={venues} initialVenueId={eventForm.venueId}
+          initialEvent={eventForm.venueId ? events[eventForm.venueId] : null}
+          onClose={() => setEventForm(null)} onSave={saveEvent} onDelete={removeEvent} />
       )}
 
       {showShare && (

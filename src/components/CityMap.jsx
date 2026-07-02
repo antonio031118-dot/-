@@ -6,7 +6,7 @@ import { CITY_VIEW } from "../data.js";
 // Estilo oscuro de Carto: gratuito, sin API key, pega con el tema de la app.
 const STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-export default function CityMap({ city, venues, attendance, me, onOpen }) {
+export default function CityMap({ city, venues, attendance, events = {}, me, onOpen }) {
   const ref = useRef(null);
   const map = useRef(null);
   const openRef = useRef(onOpen);
@@ -23,7 +23,7 @@ export default function CityMap({ city, venues, attendance, me, onOpen }) {
           return {
             type: "Feature",
             geometry: { type: "Point", coordinates: [v.lng, v.lat] },
-            properties: { id: v.id, name: v.name, count: list.length, mine: mine ? 1 : 0 },
+            properties: { id: v.id, name: v.name, count: list.length, mine: mine ? 1 : 0, event: events[v.id] ? 1 : 0 },
           };
         }),
     };
@@ -46,6 +46,11 @@ export default function CityMap({ city, venues, attendance, me, onOpen }) {
 
     m.on("load", () => {
       m.addSource("venues", { type: "geojson", data: geojson() });
+      // anillo ámbar para los locales con fiesta publicada hoy
+      m.addLayer({
+        id: "v-event", type: "circle", source: "venues", filter: ["==", ["get", "event"], 1],
+        paint: { "circle-radius": 13, "circle-color": "#FFB020", "circle-opacity": 0.22, "circle-stroke-width": 1.5, "circle-stroke-color": "#FFB020", "circle-stroke-opacity": 0.5 },
+      });
       // halo para los sitios con gente
       m.addLayer({
         id: "v-glow", type: "circle", source: "venues", filter: [">", ["get", "count"], 0],
@@ -114,7 +119,7 @@ export default function CityMap({ city, venues, attendance, me, onOpen }) {
     const src = m && m.getSource("venues");
     if (src) src.setData(geojson());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venues, attendance]);
+  }, [venues, attendance, events]);
 
   return <div ref={ref} style={{ position: "absolute", inset: 0 }} />;
 }
